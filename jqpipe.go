@@ -77,7 +77,12 @@ func (p *Pipe) Next() (json.RawMessage, error) {
 	var msg json.RawMessage
 	err := p.dec.Decode(&msg)
 
-	//TODO: guard against a Next() after we have terminated.
+	// Guard against a Next() after we have terminated.
+	if p.jq.ProcessState.Exited() {
+		fmt.Println("jq process exited")
+		return nil, io.EOF
+	}
+
 	fmt.Println("jq process status after decoding message", p.jq.ProcessState.String())
 	if err == nil {
 		return msg, nil
