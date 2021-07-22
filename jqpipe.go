@@ -78,6 +78,7 @@ func (p *Pipe) Next() (json.RawMessage, error) {
 	err := p.dec.Decode(&msg)
 
 	//TODO: guard against a Next() after we have terminated.
+	fmt.Println("jq process status after decoding message", p.jq.ProcessState.Pid(), p.jq.ProcessState.String())
 	if err == nil {
 		return msg, nil
 	}
@@ -89,21 +90,26 @@ func (p *Pipe) Next() (json.RawMessage, error) {
 		return nil, err
 	}
 
+	fmt.Println("jq process status before being killed", p.jq.ProcessState.Pid(), p.jq.ProcessState.String())
 	// terminate jq (if it hasn't died already)
-	p.jq.Process.Kill()
-	p.jq.Wait()
+	killErr := p.jq.Process.Kill()
+	fmt.Println("jq process killed, error was [", killErr, "]")
+	waitErr := p.jq.Wait()
+	fmt.Println("done waiting for jq process, error was [", waitErr, "]")
 
+	fmt.Println("jq process status after being killed", p.jq.ProcessState.Pid(), p.jq.ProcessState.String())
 	// if jq complained, that's our error
 	if p.stderr.Len() != 0 {
 		return nil, errors.New(p.stderr.String())
 	}
 
-	if p.jq.ProcessState.Success() {
+	fmt.Println("jq process status before checking if it is success", p.jq.ProcessState.Pid(), p.jq.ProcessState.String())
+	fmt.Println("jq process exit code", p.jq.ProcessState.Pid(), p.jq.ProcessState.ExitCode())
+	if p.jq.ProcessState.Success() || p.jq.ProcessState.Exited() || p.jq.ProcessState.String() == "signal: killed" {
 		return nil, io.EOF
 	}
 
-	fmt.Println(p.jq.ProcessState.String())
-
+	fmt.Println("jq process status before unexplained error", p.jq.ProcessState.Pid(), p.jq.ProcessState.String())
 	return nil, errors.New("unexplained jq failure")
 }
 
