@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os/exec"
 )
@@ -100,6 +101,8 @@ func (p *Pipe) Next() (json.RawMessage, error) {
 	if p.jq.ProcessState.Success() {
 		return nil, io.EOF
 	}
+
+	fmt.Println(p.jq.ProcessState.String())
 
 	return nil, errors.New("unexplained jq failure")
 }
